@@ -84,9 +84,10 @@ func main() {
 	zc := zulip.New(cfg.Zulip.BaseURL, cfg.Zulip.Email, cfg.Zulip.APIKey, zulipPolicy.Client())
 
 	b := &bridge.Bridge{
-		GraftHost: graftHost,
-		Series:    cfg.Graft.Series,
-		MaxMsgs:   cfg.Zulip.MaxMsgs,
+		GraftHost:    graftHost,
+		Series:       cfg.Graft.Series,
+		MaxMsgs:      cfg.Zulip.MaxMsgs,
+		ZulipBaseURL: cfg.Zulip.BaseURL,
 		Opts: bridge.Options{
 			Explicit:             explicitMappings(cfg.Mappings),
 			AllowTitleMatching:   cfg.AllowTitleMatching,
