@@ -109,7 +109,7 @@ func (c *Client) ReplyToIssue(ctx context.Context, series, issueOrPatchNoteURI, 
 		AttributedTo: c.ActorURL,
 		InReplyTo:    issueOrPatchNoteURI,
 		Content:      content,
-URL:          sourceURL,
+		URL:          sourceURL,
 		Published:    now.Format(time.RFC3339),
 		To:           []string{ap.PublicAudience},
 	}

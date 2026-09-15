@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -60,6 +61,9 @@ type Bridge struct {
 	// inspects.
 	MaxMsgs int
 	Opts    Options
+	// WebURL is Zulip's public, browser-facing base URL, used for the
+	// trackback link sent along with every forwarded message.
+	WebURL string
 
 	Zulip zulipAPI
 	Graft graftAPI
@@ -316,10 +320,7 @@ func (b *Bridge) forwardZulipToGraft(ctx context.Context, messages []zulip.Messa
 			continue
 		}
 		content := truncateRunes("**via Zulip, "+senderLabel(m)+":**\n\n"+m.Content, b.maxContent())
-		// Generate trackback URL to the original Zulip message
-		// Format: https://zulip.cyberwild.org/#narrow/stream/{streamId}/topic/{urlEncodedSubject}/near/{messageId}
-		sourceURL := fmt.Sprintf("https://zulip.cyberwild.org/#narrow/stream/%d/topic/%s/near/%d", m.StreamID, strings.ReplaceAll(m.Subject, " ", "%20"), m.ID)
-		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, sourceURL); err != nil {
+		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, messageURL(b.WebURL, m.StreamID, m.Subject, m.ID)); err != nil {
 			b.logf(slog.LevelError, "deliver reply failed", "message", m.ID, "stream_id", m.StreamID, "topic", m.Subject, "err", err)
 			continue
 		}
@@ -428,4 +429,26 @@ func truncateRunes(s string, n int) string {
 		return s
 	}
 	return string(r[:n])
+}
+
+// messageURL is the public permalink of one Zulip message — the trackback
+// Graft shows next to the mirrored reply. Empty when no web URL is
+// configured: Graft treats an empty url as "no trackback".
+func messageURL(webURL string, streamID int64, topic string, messageID int64) string {
+	if webURL == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/#narrow/stream/%d/topic/%s/near/%d",
+		strings.TrimRight(webURL, "/"), streamID, encodeHashComponent(topic), messageID)
+}
+
+// encodeHashComponent matches Zulip's own web client (hash_util's
+// encodeHashComponent): percent-encoding with "%" swapped for "." so the
+// fragment survives Zulip's router, and the characters that would then be
+// ambiguous escaped explicitly.
+func encodeHashComponent(s string) string {
+	e := url.PathEscape(s)
+	// PathEscape leaves these alone; encodeURIComponent does not.
+	e = strings.NewReplacer("+", "%2B", ":", "%3A", "@", "%40", "=", "%3D", "&", "%26", "$", "%24", ",", "%2C", ";", "%3B").Replace(e)
+	return strings.NewReplacer("%", ".", "(", ".28", ")", ".29", ".", ".2E").Replace(e)
 }

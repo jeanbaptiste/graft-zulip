@@ -87,6 +87,7 @@ func main() {
 		GraftHost: graftHost,
 		Series:    cfg.Graft.Series,
 		MaxMsgs:   cfg.Zulip.MaxMsgs,
+		WebURL:    zulipWebURL(cfg),
 		Opts: bridge.Options{
 			Explicit:             explicitMappings(cfg.Mappings),
 			AllowTitleMatching:   cfg.AllowTitleMatching,
@@ -234,4 +235,13 @@ func hostOf(base string) string {
 		s = s[:i]
 	}
 	return s
+}
+
+// zulipWebURL is where trackback links point: zulip.public_url when set,
+// else the API base URL.
+func zulipWebURL(cfg *config.Config) string {
+	if cfg.Zulip.PublicURL != "" {
+		return cfg.Zulip.PublicURL
+	}
+	return cfg.Zulip.BaseURL
 }

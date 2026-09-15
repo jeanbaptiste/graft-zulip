@@ -60,9 +60,12 @@ type Config struct {
 
 	Zulip struct {
 		BaseURL string `json:"base_url"`
-		Email   string `json:"email"`    // the bridge's bot account email
-		APIKey  string `json:"api_key"`  // the bot's API key
-		MaxMsgs int    `json:"max_msgs"` // how many recent messages to inspect per pass
+		// PublicURL is the browser-facing Zulip URL used in trackback
+		// links; defaults to BaseURL.
+		PublicURL string `json:"public_url"`
+		Email     string `json:"email"`    // the bridge's bot account email
+		APIKey    string `json:"api_key"`  // the bot's API key
+		MaxMsgs   int    `json:"max_msgs"` // how many recent messages to inspect per pass
 	} `json:"zulip"`
 }
 

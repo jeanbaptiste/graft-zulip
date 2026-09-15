@@ -14,7 +14,7 @@ import (
 const testHost = "g.example"
 
 type replyCall struct {
-	series, noteURI, content string
+	series, noteURI, content, sourceURL string
 }
 
 type fakeGraft struct {
@@ -26,8 +26,8 @@ func (f *fakeGraft) Outbox(_ context.Context, _ string) (*ap.OrderedCollection, 
 	return f.outbox, nil
 }
 
-func (f *fakeGraft) ReplyToIssue(_ context.Context, series, noteURI, content string) error {
-	f.replies = append(f.replies, replyCall{series, noteURI, content})
+func (f *fakeGraft) ReplyToIssue(_ context.Context, series, noteURI, content, sourceURL string) error {
+	f.replies = append(f.replies, replyCall{series, noteURI, content, sourceURL})
 	return nil
 }
 
@@ -275,5 +275,16 @@ func TestBindValidatesNote(t *testing.T) {
 	}
 	if _, ok := b.State.ConversationNote(key); ok {
 		t.Fatal("mapping not removed")
+	}
+}
+
+func TestMessageURL(t *testing.T) {
+	got := messageURL("https://zulip.example/", 7, "Issue #3: a.b (draft)", 42)
+	want := "https://zulip.example/#narrow/stream/7/topic/Issue.20.233.3A.20a.2Eb.20.28draft.29/near/42"
+	if got != want {
+		t.Errorf("messageURL = %q, want %q", got, want)
+	}
+	if got := messageURL("", 7, "x", 42); got != "" {
+		t.Errorf("no web URL should give no trackback, got %q", got)
 	}
 }
