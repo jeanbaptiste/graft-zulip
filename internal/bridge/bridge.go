@@ -24,7 +24,7 @@ type zulipAPI interface {
 // graftAPI is the subset of the Graft client the bridge needs.
 type graftAPI interface {
 	Outbox(ctx context.Context, series string) (*ap.OrderedCollection, error)
-	ReplyToIssue(ctx context.Context, series, noteURI, content string) error
+	ReplyToIssue(ctx context.Context, series, noteURI, content, sourceURL string) error
 }
 
 // Options are the security-relevant knobs of a bridge pass.
@@ -316,7 +316,10 @@ func (b *Bridge) forwardZulipToGraft(ctx context.Context, messages []zulip.Messa
 			continue
 		}
 		content := truncateRunes("**via Zulip, "+senderLabel(m)+":**\n\n"+m.Content, b.maxContent())
-		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content); err != nil {
+		// Generate trackback URL to the original Zulip message
+		// Format: https://zulip.cyberwild.org/#narrow/stream/{streamId}/topic/{urlEncodedSubject}/near/{messageId}
+		sourceURL := fmt.Sprintf("https://zulip.cyberwild.org/#narrow/stream/%d/topic/%s/near/%d", m.StreamID, strings.ReplaceAll(m.Subject, " ", "%20"), m.ID)
+		if err := b.Graft.ReplyToIssue(ctx, series, noteURI, content, sourceURL); err != nil {
 			b.logf(slog.LevelError, "deliver reply failed", "message", m.ID, "stream_id", m.StreamID, "topic", m.Subject, "err", err)
 			continue
 		}
